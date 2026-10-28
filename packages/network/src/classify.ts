@@ -693,6 +693,18 @@ export function parseProbeReply(body: string, options: readonly TimeOption[] = [
     const keys = options.filter(o => o.label.startsWith(dayName)).map(o => o.key);
     if (keys.length) for (const m of t.matchAll(re)) mark(keys, m.index!, m[0].length);
   }
+  // A day the member names that is not among the offered options is a counter-proposal
+  // ("Friday works" when Friday was not offered). Do not treat it as a yes to every option.
+  let mentionedUnmatchedDay = false;
+  for (const [re, dayName] of DAY_WORDS) {
+    if (t.match(re) && !options.some(o => o.label.startsWith(dayName))) {
+      mentionedUnmatchedDay = true;
+      break;
+    }
+  }
+  if (mentionedUnmatchedDay && !pos.size && c.answer === "yes") {
+    return { answer: "yes", keys: [], why: "counter" };
+  }
   for (const m of t.matchAll(/\b(\d{1,2})(?::\d\d)?\s*(am|pm)\b/g)) {
     const label = `${Number(m[1])}${m[2]}`;
     mark(options.filter(o => o.label.endsWith(` ${label}`)).map(o => o.key), m.index!, m[0].length);
